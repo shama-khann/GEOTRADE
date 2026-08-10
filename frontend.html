@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEOTRADE — Geopolitical Tension Index</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="//unpkg.com/three-globe"></script>
+<style>
+:root{
+  --bg:#04080f;
+  --panel:rgba(5,12,24,0.97);
+  --border:rgba(0,200,255,0.18);
+  --accent:#00d4ff;
+  --danger:#ff2244;
+  --warn:#ffbb00;
+  --success:#00ff88;
+  --text:#cce0f0;
+  --bright:#ffffff;
+  --muted:#4a7090;
+  --font:'Share Tech Mono',monospace;
+  --hfont:'Orbitron',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text);}
+body::after{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.018) 3px,rgba(0,0,0,0.018) 4px);}
+
+/* ── TOP BAR ── */
+#topbar{position:fixed;top:0;left:0;right:0;height:50px;z-index:200;
+  background:rgba(2,6,14,0.99);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 18px;gap:0;}
+.logo{font-family:var(--hfont);font-size:16px;font-weight:800;letter-spacing:3px;
+  color:var(--accent);margin-right:22px;text-shadow:0 0 18px rgba(0,212,255,0.6);}
+.gti-block{display:flex;align-items:baseline;gap:9px;margin-right:14px;}
+#t-score{font-family:var(--hfont);font-size:28px;font-weight:800;color:var(--warn);}
+#t-delta{font-size:13px;font-weight:700;}
+#t-label{font-size:11px;padding:3px 10px;border-radius:3px;letter-spacing:1px;font-weight:700;
+  background:rgba(255,187,0,.15);color:var(--warn);border:1px solid rgba(255,187,0,.4);}
+.tdiv{width:1px;height:30px;background:var(--border);margin:0 18px;}
+
+/* NAV */
+.nav-tabs{display:flex;gap:5px;margin:0 auto;}
+.ntab{display:flex;align-items:center;gap:8px;padding:7px 18px;border-radius:5px;
+  font-size:12px;letter-spacing:1px;cursor:pointer;border:1px solid transparent;
+  transition:all .2s;color:var(--text);font-weight:600;}
+.ntab svg{width:15px;height:15px;}
+.ntab:hover{background:rgba(0,212,255,.09);border-color:var(--border);}
+.ntab.active{background:rgba(0,212,255,.16);border-color:rgba(0,212,255,.45);color:var(--accent);}
+
+.live-pill{display:flex;align-items:center;gap:6px;padding:4px 12px;
+  border:1px solid rgba(0,255,136,.35);border-radius:20px;background:rgba(0,255,136,.07);margin-left:16px;}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#t-time{font-size:12px;color:var(--muted);margin-left:16px;letter-spacing:1px;}
+#t-feeds{font-size:12px;color:var(--muted);margin-left:10px;}
+
+/* VIEWS */
+.view{display:none;position:fixed;left:0;right:0;top:50px;bottom:38px;}
+.view.active{display:flex;}
+
+/* SIDEBARS */
+.lsidebar{width:215px;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;}
+.rsidebar{width:280px;background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;}
+.sb-sec{padding:14px 15px;border-bottom:1px solid var(--border);}
+.sb-title{font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:12px;text-transform:uppercase;font-weight:700;}
+.scroll-y{overflow-y:auto;}
+.scroll-y::-webkit-scrollbar{width:3px;}
+.scroll-y::-webkit-scrollbar-thumb{background:rgba(0,200,255,.3);}
+
+/* BOTTOM */
+#bottombar{position:fixed;bottom:0;left:0;right:0;height:38px;z-index:200;
+  background:rgba(2,6,14,0.99);border-top:1px solid var(--border);
+  display:flex;align-items:center;}
+.bb-score{padding:0 16px;border-right:1px solid var(--border);font-size:12px;
+  white-space:nowrap;display:flex;align-items:center;gap:10px;height:100%;}
+.bb-score span{font-family:var(--hfont);font-size:15px;font-weight:700;}
+.bb-tape-wrap{flex:1;overflow:hidden;}
+.bb-tape{display:flex;gap:0;animation:scrolltape 55s linear infinite;white-space:nowrap;}
+@keyframes scrolltape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bb-ev{display:flex;align-items:center;gap:12px;padding:0 22px;border-right:1px solid var(--border);
+  font-size:11px;height:38px;cursor:pointer;color:var(--text);}
+.bb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.bb-loc{color:var(--accent);font-weight:700;}
+.sev-c{background:rgba(255,34,68,.25);color:#ff6680;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;}
+.sev-h{background:rgba(255,187,0,.25);color:#ffcc44;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;}
+.sev-m{background:rgba(0,212,255,.18);color:var(--accent);font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;}
+
+/* TOOLTIP */
+#maptip{position:fixed;z-index:500;pointer-events:none;display:none;
+  background:rgba(2,8,20,0.98);border:1px solid var(--accent);border-radius:6px;
+  padding:14px 18px;min-width:210px;box-shadow:0 0 24px rgba(0,212,255,.25);}
+.mt-h{font-family:var(--hfont);font-size:14px;color:var(--accent);margin-bottom:10px;letter-spacing:1px;font-weight:700;}
+.mt-r{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.mt-l{color:var(--muted);}
+.mt-v{font-weight:700;color:var(--bright);}
+
+/* BADGES */
+.buy-b{background:rgba(0,255,136,.18);color:#00ff88;border:1px solid rgba(0,255,136,.4);
+  font-size:11px;padding:2px 9px;border-radius:3px;letter-spacing:1px;font-weight:800;}
+.sell-b{background:rgba(255,34,68,.18);color:#ff4466;border:1px solid rgba(255,34,68,.4);
+  font-size:11px;padding:2px 9px;border-radius:3px;letter-spacing:1px;font-weight:800;}
+.hold-b{background:rgba(255,187,0,.15);color:#ffcc44;border:1px solid rgba(255,187,0,.4);
+  font-size:11px;padding:2px 9px;border-radius:3px;letter-spacing:1px;font-weight:800;}
+.badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:3px;letter-spacing:1px;}
+.b-red{background:rgba(255,34,68,.15);color:#ff6680;border:1px solid rgba(255,34,68,.3);}
+.b-warn{background:rgba(255,187,0,.15);color:#ffcc44;border:1px solid rgba(255,187,0,.3);}
+.b-grn{background:rgba(0,255,136,.12);color:#00ff88;border:1px solid rgba(0,255,136,.25);}
+.b-blue{background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.25);}
+.c-bull{color:#00ff88;font-weight:700;}
+.c-bear{color:#ff4466;font-weight:700;}
+.c-warn{color:#ffcc44;font-weight:700;}
+
+/* NARRATIVE */
+.narr-item{padding:9px 11px;margin-bottom:6px;border-left:3px solid var(--accent);
+  background:rgba(0,212,255,.06);border-radius:0 5px 5px 0;cursor:pointer;}
+.narr-count{font-size:12px;color:var(--accent);letter-spacing:1px;margin-bottom:3px;font-weight:700;}
+.narr-label{font-size:12px;line-height:1.5;color:var(--bright);}
+
+/* ARTICLES */
+.art-item{padding:10px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.art-item:hover{background:rgba(0,212,255,.06);}
+.art-src{font-size:12px;color:var(--accent);letter-spacing:1px;margin-bottom:4px;font-weight:700;}
+.art-title{font-size:12px;line-height:1.5;color:var(--bright);}
+.art-meta{font-size:12px;margin-top:4px;}
+
+/* SIGNAL items (earth + mini) */
+.sig-item{padding:14px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.sig-item:hover{background:rgba(0,212,255,.06);}
+.si-sym{font-family:var(--hfont);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--bright);}
+.si-price{font-family:var(--hfont);font-size:15px;font-weight:700;color:var(--bright);}
+.si-chg{font-size:12px;font-weight:700;}
+.si-conf{font-family:var(--hfont);font-size:22px;font-weight:800;}
+.si-bar{height:4px;border-radius:2px;margin-top:7px;background:rgba(255,255,255,.08);overflow:hidden;}
+.si-fill{height:100%;border-radius:2px;}
+.si-note{font-size:13px;color:var(--text);margin-top:6px;line-height:1.5;}
+
+/* BAR ROW */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.bar-row .bl{font-size:13px;color:var(--text);width:60px;flex-shrink:0;}
+.bar-track{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s ease;}
+.bar-row .bv{font-size:14px;font-weight:700;min-width:38px;text-align:right;}
+
+/* RISK LEGEND */
+.rl-item{display:flex;align-items:center;gap:9px;font-size:12px;margin-bottom:9px;color:var(--bright);}
+.rl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ASSET LIST */
+.asset-item{padding:13px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.asset-item:hover,.asset-item.selected{background:rgba(0,212,255,.07);}
+.asset-item.selected{border-left:3px solid var(--accent);}
+.a-sym{font-family:var(--hfont);font-size:14px;font-weight:700;margin-bottom:4px;color:var(--bright);}
+.a-desc{font-size:13px;color:var(--text);}
+.a-conf{font-family:var(--hfont);font-size:24px;font-weight:800;}
+.a-bars{margin-top:8px;}
+.a-bar-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.a-bl{font-size:10px;color:var(--muted);width:30px;}
+.a-bt{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.a-bf{height:100%;border-radius:2px;}
+.a-trig{font-size:13px;color:var(--warn);margin-top:7px;font-weight:600;}
+
+/* TRADE SETUP */
+.trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.tg-cell{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:14px;}
+.tg-label{font-size:12px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase;}
+.tg-val{font-family:var(--hfont);font-size:20px;font-weight:700;}
+.tg-entry{color:var(--accent);}
+.tg-stop{color:var(--danger);}
+.tg-target{color:var(--success);}
+.tg-rr{color:var(--warn);}
+
+/* CHART */
+.chart-box{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px;}
+.chart-hdr{display:flex;justify-content:space-between;font-size:12px;margin-bottom:12px;color:var(--text);}
+.chart-hdr span:first-child{font-family:var(--hfont);font-size:15px;font-weight:700;color:var(--bright);}
+.chart-hdr span:last-child{color:var(--accent);}
+
+/* TABS */
+.trade-tabs{display:flex;border-bottom:1px solid var(--border);}
+.ttab{padding:12px 20px;font-size:13px;letter-spacing:1px;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--muted);transition:all .2s;font-weight:600;}
+.ttab:hover{color:var(--text);}
+.ttab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.trade-body{flex:1;overflow-y:auto;padding:18px;}
+.trade-body::-webkit-scrollbar{width:3px;}
+.trade-body::-webkit-scrollbar-thumb{background:rgba(0,200,255,.3);}
+
+/* FILTER TABS */
+.ftab{font-size:13px;padding:5px 12px;border-radius:4px;cursor:pointer;
+  border:1px solid var(--border);color:var(--text);transition:all .15s;font-weight:600;}
+.ftab:hover{border-color:var(--accent);color:var(--accent);}
+.ftab.active{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.5);color:var(--accent);}
+.dtab{font-size:13px;padding:4px 14px;border-radius:4px;cursor:pointer;
+  border:1px solid var(--border);color:var(--text);font-weight:700;}
+.dtab.ab{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.4);color:#00ff88;}
+.dtab.as{background:rgba(255,34,68,.12);border-color:rgba(255,34,68,.4);color:#ff4466;}
+
+/* MAP path */
+.r-path{cursor:pointer;transition:filter .25s;}
+.r-path:hover{filter:brightness(1.6);}
+@keyframes hotpulse{0%{r:7;opacity:.9}100%{r:24;opacity:0}}
+.hring{animation:hotpulse 2.2s ease-out infinite;}
+
+/* SIGNAL MAIN HEADER */
+.smh{padding:16px 18px;border-bottom:1px solid var(--border);}
+.sm-sym{font-family:var(--hfont);font-size:22px;font-weight:800;letter-spacing:2px;color:var(--bright);}
+.sm-cat{font-size:11px;color:var(--text);margin-top:4px;letter-spacing:1px;}
+.conf-bar{height:6px;border-radius:3px;margin-top:6px;background:rgba(255,255,255,.08);overflow:hidden;}
+.conf-fill{height:100%;border-radius:3px;}
+
+/* REGION DETAIL */
+.reg-impact-row{display:flex;align-items:center;gap:9px;font-size:12px;margin-bottom:8px;color:var(--bright);}
+.disclaimer{font-size:13px;color:var(--muted);padding:12px 16px;border-top:1px solid var(--border);
+  background:rgba(255,187,0,.03);line-height:1.6;}
+
+/* AI reasoning text */
+.ai-text{font-size:13px;line-height:1.75;color:var(--bright);}
+.sec-label{font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;font-weight:700;}
+.risk-item{display:flex;align-items:center;gap:9px;font-size:12px;margin-bottom:8px;color:var(--text);}
+.risk-item::before{content:'—';color:var(--danger);font-weight:700;}
+
+/* Search input */
+input[type=text],input:not([type]){
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:5px;padding:8px 12px;font-family:var(--font);
+  font-size:12px;color:var(--bright);outline:none;width:100%;
+}
+input::placeholder{color:var(--muted);}
+input:focus{border-color:rgba(0,212,255,.5);background:rgba(0,212,255,.05);}
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">GEOTRADE</div>
+  <div class="tdiv"></div>
+  <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-right:8px">GLOBAL TENSION INDEX (GTI)</div>
+  <div class="gti-block">
+    <div id="t-score">--.-</div>
+    <div id="t-delta" class="c-bull">--</div>
+    <div id="t-label">LOADING</div>
+  </div>
+  <div class="nav-tabs">
+    <div class="ntab active" onclick="switchView('earth')" id="tab-earth">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      EARTH PULSE
+    </div>
+    <div class="ntab" onclick="switchView('map')" id="tab-map">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+      GEO MAP
+    </div>
+    <div class="ntab" onclick="switchView('signals')" id="tab-signals">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      AI SIGNALS
+    </div>
+  </div>
+  <div class="live-pill"><div class="ldot"></div><span style="font-size:11px;color:var(--success);letter-spacing:1px">LIVE</span></div>
+  <div style="font-size:10px;color:var(--muted);margin-left:10px" id="t-feeds">-- feeds</div>
+  <div id="t-time">--:--:-- UTC</div>
+</div>
+
+<!-- ═══ VIEW 1: EARTH PULSE ═══ -->
+<div class="view active" id="view-earth">
+  <div class="lsidebar">
+    <div class="sb-sec">
+      <div class="sb-title">Risk Level</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ff3355"></div>Critical &gt;80</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ff6600"></div>High &gt;60</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ffaa00"></div>Medium &gt;35</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#00aa55"></div>Low &lt;35</div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-title">Top Narratives</div>
+      <div id="e-narr" class="scroll-y" style="max-height:150px"></div>
+    </div>
+    <div class="sb-sec" style="flex:1">
+      <div class="sb-title">Signal Breakdown</div>
+      <div id="e-bars"></div>
+    </div>
+  </div>
+  <div id="earth-wrap" style="flex:1;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);
+      font-size:15px;color:var(--muted);letter-spacing:2px;z-index:10;">
+      LIVE &nbsp; Global GTI <span id="globe-gti" style="color:var(--accent);font-family:var(--hfont)">--.-</span>
+    </div>
+    <div style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+      font-size:11px;color:var(--muted);z-index:10;">Click any region to view market impact</div>
+  </div>
+  <div class="rsidebar">
+    <div class="sb-sec" style="padding:10px 14px"><div class="sb-title" style="margin-bottom:0">Signals</div></div>
+    <div class="scroll-y" style="flex:1" id="e-signals"></div>
+  </div>
+</div>
+
+
+
+<!-- ═══ VIEW 2: GEO MAP ═══ -->
+<div class="view" id="view-map">
+  <div class="lsidebar">
+    <div class="sb-sec">
+      <div class="sb-title">Market Impact Map</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ff3355"></div>Critical &gt;80</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ff6600"></div>High &gt;60</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#ffaa00"></div>Medium &gt;35</div>
+      <div class="rl-item"><div class="rl-dot" style="background:#00aa55"></div>Low &lt;35</div>
+    </div>
+    <div class="sb-sec" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div class="sb-title">Region Heat</div>
+      <div id="m-rheat" class="scroll-y" style="flex:1"></div>
+    </div>
+  </div>
+  <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#04080f;">
+    <!-- Proper world map SVG -->
+    <svg id="geomap" viewBox="0 0 2000 1001" style="width:100%;height:100%;" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="ocean-grad" cx="50%" cy="45%">
+          <stop offset="0%" stop-color="#071428"/>
+          <stop offset="100%" stop-color="#030810"/>
+        </radialGradient>
+      </defs>
+      <rect width="2000" height="1001" fill="url(#ocean-grad)"/>
+      <!-- Grid -->
+      <g stroke="rgba(0,120,200,0.07)" stroke-width="0.5" fill="none">
+        <line x1="0" y1="250" x2="2000" y2="250"/><line x1="0" y1="500" x2="2000" y2="500"/>
+        <line x1="0" y1="750" x2="2000" y2="750"/>
+        <line x1="500" y1="0" x2="500" y2="1001"/><line x1="1000" y1="0" x2="1000" y2="1001"/>
+        <line x1="1500" y1="0" x2="1500" y2="1001"/>
+      </g>
+
+      <!-- NORTH AMERICA - simplified but recognizable -->
+      <path id="r-na" class="r-path" data-region="north_america" data-label="North America"
+        d="M120 80 L190 65 L260 58 L330 62 L390 72 L435 88 L460 108 L472 132 L468 158 L458 182
+           L448 205 L435 225 L415 242 L395 255 L370 268 L348 278 L328 288 L308 295 L290 298
+           L270 295 L252 285 L238 272 L228 258 L222 242 L220 225 L225 208 L232 192 L242 178
+           L248 162 L245 145 L235 130 L218 118 L198 108 L175 98 L150 88 Z"
+        fill="rgba(0,120,200,0.45)" stroke="rgba(0,180,255,0.5)" stroke-width="1.5"/>
+      <!-- Alaska bump -->
+      <path d="M120 80 L95 70 L75 72 L62 82 L68 95 L85 98 L105 92 Z"
+        fill="rgba(0,120,200,0.4)" stroke="rgba(0,180,255,0.4)" stroke-width="1"/>
+      <!-- Florida -->
+      <path d="M330 290 L340 308 L335 322 L325 318 L320 300 Z"
+        fill="rgba(0,120,200,0.4)" stroke="rgba(0,180,255,0.35)" stroke-width="1"/>
+
+      <!-- CENTRAL AMERICA -->
+      <path d="M278 298 L295 310 L305 328 L298 342 L282 348 L268 338 L262 320 L265 305 Z"
+        fill="rgba(0,120,180,0.38)" stroke="rgba(0,180,255,0.3)" stroke-width="1"/>
+
+      <!-- SOUTH AMERICA -->
+      <path id="r-sa" class="r-path" data-region="south_america" data-label="South America"
+        d="M285 355 L325 342 L368 345 L405 358 L432 378 L448 405 L455 438 L455 472
+           L448 508 L435 545 L415 582 L390 618 L360 648 L328 668 L298 678 L270 672
+           L245 655 L225 628 L210 595 L202 558 L200 520 L205 480 L215 440 L232 400
+           L252 372 Z"
+        fill="rgba(0,140,80,0.45)" stroke="rgba(0,200,100,0.5)" stroke-width="1.5"/>
+
+      <!-- EUROPE - west -->
+      <path id="r-eu" class="r-path" data-region="europe" data-label="Europe"
+        d="M820 75 L870 65 L920 62 L970 68 L1010 80 L1038 96 L1048 118 L1042 142
+           L1025 162 L1000 178 L970 188 L938 192 L905 188 L872 178 L845 162 L828 142
+           L818 118 L815 95 Z"
+        fill="rgba(120,40,200,0.52)" stroke="rgba(160,80,255,0.55)" stroke-width="1.5"/>
+      <!-- UK -->
+      <path d="M800 78 L812 72 L820 80 L815 95 L802 92 L796 82 Z"
+        fill="rgba(120,40,200,0.42)" stroke="rgba(160,80,255,0.4)" stroke-width="1"/>
+      <!-- Scandinavia -->
+      <path d="M900 30 L932 22 L960 28 L972 48 L965 68 L940 72 L915 65 L900 48 Z"
+        fill="rgba(120,40,200,0.45)" stroke="rgba(160,80,255,0.4)" stroke-width="1"/>
+
+      <!-- RUSSIA / E.EUROPE - huge recognizable shape -->
+      <path id="r-ru" class="r-path" data-region="europe" data-label="Russia / E.Europe"
+        d="M1048 45 L1150 32 L1300 22 L1480 18 L1650 22 L1780 35 L1870 52 L1920 72
+           L1935 98 L1922 125 L1895 148 L1855 165 L1800 178 L1730 185 L1650 188
+           L1560 185 L1465 178 L1360 168 L1260 155 L1165 142 L1085 130 L1048 118
+           L1042 88 Z"
+        fill="rgba(140,30,180,0.48)" stroke="rgba(180,60,220,0.45)" stroke-width="1.5"/>
+
+      <!-- AFRICA -->
+      <path id="r-af" class="r-path" data-region="africa" data-label="Africa"
+        d="M862 255 L920 240 L985 238 L1048 248 L1100 265 L1138 290 L1155 322
+           L1158 360 L1152 400 L1138 442 L1115 482 L1085 520 L1050 555 L1010 585
+           L968 608 L925 622 L882 625 L840 615 L800 595 L768 565 L745 528
+           L732 488 L728 445 L732 400 L742 355 L758 312 L782 272 L812 255 Z"
+        fill="rgba(160,110,30,0.52)" stroke="rgba(220,160,40,0.5)" stroke-width="1.5"/>
+      <!-- Madagascar -->
+      <path d="M1075 490 L1088 478 L1098 495 L1095 518 L1082 525 L1072 510 Z"
+        fill="rgba(160,110,30,0.42)" stroke="rgba(220,160,40,0.35)" stroke-width="1"/>
+
+      <!-- MIDDLE EAST - distinct shape -->
+      <path id="r-me" class="r-path" data-region="middle_east" data-label="Middle East"
+        d="M1048 200 L1095 188 L1148 185 L1198 190 L1245 202 L1282 222 L1298 248
+           L1292 275 L1272 298 L1242 315 L1205 322 L1165 318 L1128 305 L1095 285
+           L1068 262 L1048 238 Z"
+        fill="rgba(220,40,40,0.62)" stroke="rgba(255,60,60,0.65)" stroke-width="2"/>
+      <!-- Arabian peninsula -->
+      <path d="M1155 318 L1185 332 L1205 358 L1210 390 L1195 412 L1172 415 L1152 398 L1145 368 L1148 340 Z"
+        fill="rgba(220,50,40,0.52)" stroke="rgba(255,70,60,0.45)" stroke-width="1"/>
+
+      <!-- CENTRAL / SOUTH ASIA -->
+      <path d="M1300 188 L1420 182 L1520 185 L1580 198 L1598 220 L1588 248 L1558 268 L1515 280 L1462 285 L1405 280 L1352 265 L1308 245 L1295 222 Z"
+        fill="rgba(50,100,170,0.42)" stroke="rgba(70,140,220,0.38)" stroke-width="1"/>
+      <!-- India subcontinent -->
+      <path id="r-india" class="r-path" data-region="asia" data-label="Asia"
+        d="M1385 280 L1432 278 L1468 285 L1490 305 L1495 332 L1485 362 L1465 392 L1438 418 L1408 435 L1382 438 L1358 428 L1342 405 L1338 375 L1345 345 L1358 315 Z"
+        fill="rgba(40,100,165,0.48)" stroke="rgba(60,150,225,0.42)" stroke-width="1.2"/>
+      <!-- Sri Lanka -->
+      <path d="M1448 448 L1458 442 L1465 452 L1460 462 L1448 460 Z"
+        fill="rgba(40,100,165,0.4)" stroke="rgba(60,150,225,0.35)" stroke-width="1"/>
+
+      <!-- ASIA MAIN (east) -->
+      <path id="r-as" class="r-path" data-region="asia" data-label="Asia"
+        d="M1510 188 L1620 182 L1730 178 L1840 185 L1920 198 L1960 218 L1970 248
+           L1958 278 L1930 305 L1892 325 L1842 342 L1782 352 L1715 358 L1645 355
+           L1575 345 L1512 328 L1470 305 L1455 278 L1462 250 L1478 225 Z"
+        fill="rgba(40,100,170,0.5)" stroke="rgba(60,150,230,0.48)" stroke-width="1.5"/>
+      <!-- Japan -->
+      <path d="M1915 215 L1928 208 L1938 218 L1932 235 L1918 238 L1912 228 Z"
+        fill="rgba(40,100,165,0.45)" stroke="rgba(60,150,225,0.4)" stroke-width="1"/>
+      <!-- Korean peninsula -->
+      <path d="M1875 238 L1892 232 L1902 245 L1895 262 L1878 268 L1868 255 Z"
+        fill="rgba(40,100,165,0.45)" stroke="rgba(60,150,225,0.4)" stroke-width="1"/>
+
+      <!-- SE ASIA + Indonesia -->
+      <path id="r-sea" class="r-path" data-region="asia" data-label="SE Asia"
+        d="M1590 355 L1650 352 L1715 358 L1762 372 L1790 392 L1790 418 L1768 438
+           L1732 448 L1688 445 L1648 432 L1618 412 L1600 388 Z"
+        fill="rgba(40,100,162,0.45)" stroke="rgba(60,148,222,0.38)" stroke-width="1"/>
+      <!-- Indonesia islands -->
+      <path d="M1650 455 L1720 448 L1770 455 L1800 468 L1798 482 L1775 488 L1730 485 L1688 478 L1652 468 Z"
+        fill="rgba(40,100,160,0.42)" stroke="rgba(60,145,220,0.35)" stroke-width="1"/>
+
+      <!-- OCEANIA / AUSTRALIA -->
+      <path id="r-oc" class="r-path" data-region="oceania" data-label="Oceania"
+        d="M1648 568 L1728 552 L1808 548 L1878 558 L1935 578 L1968 608 L1975 642
+           L1962 678 L1935 708 L1895 728 L1845 738 L1788 735 L1732 722 L1682 698
+           L1648 668 L1632 635 L1628 598 Z"
+        fill="rgba(20,120,80,0.48)" stroke="rgba(0,180,100,0.48)" stroke-width="1.5"/>
+      <!-- New Zealand -->
+      <path d="M1972 705 L1985 695 L1992 708 L1988 725 L1975 728 L1968 718 Z"
+        fill="rgba(20,120,80,0.42)" stroke="rgba(0,180,100,0.38)" stroke-width="1"/>
+      <!-- Papua New Guinea -->
+      <path d="M1845 498 L1878 488 L1905 495 L1918 512 L1908 528 L1882 532 L1855 522 Z"
+        fill="rgba(20,120,78,0.42)" stroke="rgba(0,178,98,0.35)" stroke-width="1"/>
+
+      <!-- GREENLAND -->
+      <path d="M350 18 L415 8 L462 15 L472 38 L458 60 L425 70 L385 65 L350 45 Z"
+        fill="rgba(40,80,140,0.3)" stroke="rgba(80,140,210,0.22)" stroke-width="1"/>
+
+      <!-- Hotspots layer -->
+      <g id="map-hotspots"></g>
+
+      <!-- Labels -->
+      <text x="310" y="190" fill="rgba(180,220,255,0.6)" font-size="18" font-family="'Share Tech Mono'" text-anchor="middle" font-weight="bold">N. AMERICA</text>
+      <text x="320" y="530" fill="rgba(180,220,255,0.6)" font-size="16" font-family="'Share Tech Mono'" text-anchor="middle">S. AMERICA</text>
+      <text x="930" y="135" fill="rgba(210,190,255,0.65)" font-size="16" font-family="'Share Tech Mono'" text-anchor="middle">EUROPE</text>
+      <text x="1490" y="95" fill="rgba(210,190,255,0.55)" font-size="20" font-family="'Share Tech Mono'" text-anchor="middle">RUSSIA</text>
+      <text x="940" y="430" fill="rgba(220,190,140,0.6)" font-size="18" font-family="'Share Tech Mono'" text-anchor="middle">AFRICA</text>
+      <text x="1170" y="262" fill="rgba(255,160,160,0.8)" font-size="15" font-family="'Share Tech Mono'" text-anchor="middle">MID EAST</text>
+      <text x="1420" y="355" fill="rgba(160,200,255,0.55)" font-size="16" font-family="'Share Tech Mono'" text-anchor="middle">INDIA</text>
+      <text x="1740" y="272" fill="rgba(160,200,255,0.65)" font-size="22" font-family="'Share Tech Mono'" text-anchor="middle">ASIA</text>
+      <text x="1800" y="650" fill="rgba(160,220,190,0.6)" font-size="16" font-family="'Share Tech Mono'" text-anchor="middle">OCEANIA</text>
+    </svg>
+  </div>
+  <div class="rsidebar">
+    <div class="sb-sec"><div class="sb-title">Region Detail</div></div>
+    <div class="scroll-y" style="flex:1;padding:12px 14px" id="m-detail">
+      <div style="font-size:11px;color:var(--muted);margin-top:20px">Hover or click a region</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VIEW 3: AI SIGNALS ═══ -->
+<div class="view" id="view-signals">
+  <!-- Asset list -->
+  <div style="width:230px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;">
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+      <input id="asrch" placeholder="Search asset..." style="width:100%;background:rgba(255,255,255,.04);
+        border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-family:var(--font);
+        font-size:11px;color:var(--text);outline:none;">
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border)">
+      <div class="ftab active" onclick="filterA('all',this)">ALL</div>
+      <div class="ftab" onclick="filterA('commodities',this)">COMMOD</div>
+      <div class="ftab" onclick="filterA('equities',this)">EQUITY</div>
+      <div class="ftab" onclick="filterA('forex',this)">FOREX</div>
+      <div class="ftab" onclick="filterA('crypto',this)">CRYPTO</div>
+    </div>
+    <div style="display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--border)">
+      <div class="dtab ab" id="db" onclick="filterD('buy',this)">BUY</div>
+      <div class="dtab" id="ds" onclick="filterD('sell',this)">SELL</div>
+      <div class="dtab" id="dh" onclick="filterD('all',this)" style="margin-left:auto">ALL</div>
+    </div>
+    <div class="scroll-y" style="flex:1" id="asset-list"></div>
+  </div>
+
+  <!-- Main panel -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+    <div class="smh" id="smh">
+      <div style="color:var(--muted);font-size:11px;margin:10px 0">Select an asset to view full analysis</div>
+    </div>
+    <div class="trade-tabs" id="ttabs" style="display:none">
+      <div class="ttab active" onclick="tradeTab('setup',this)">TRADE SETUP</div>
+      <div class="ttab" onclick="tradeTab('ai',this)">AI REASONING</div>
+      <div class="ttab" onclick="tradeTab('chart',this)">CHART</div>
+      <div class="ttab" onclick="tradeTab('reliability',this)">RELIABILITY</div>
+    </div>
+    <div class="trade-body" id="tbody"></div>
+    <div class="disclaimer">Educational purposes only · Not financial advice · Always perform your own due diligence · GTI Model v1.0</div>
+  </div>
+
+  <!-- Right signals -->
+  <div style="width:268px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;">
+    <div class="sb-sec" style="padding:10px 14px"><div class="sb-title" style="margin-bottom:0">All Signals</div></div>
+    <div class="scroll-y" style="flex:1" id="all-mini"></div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottombar">
+  <div class="bb-score">
+    <span style="color:var(--muted);font-size:9px;letter-spacing:1px">GTI TREND</span>
+    <span id="bb-gti" style="color:var(--warn)">--.-</span>
+    <div id="bb-dots" style="display:flex;align-items:flex-end;gap:2px;height:16px"></div>
+  </div>
+  <div class="bb-tape-wrap">
+    <div class="bb-tape" id="bb-tape"></div>
+  </div>
+</div>
+
+<div id="maptip">
+  <div class="mt-h" id="mt-h">--</div>
+  <div class="mt-r"><span class="mt-l">Tension score</span><span class="mt-v" id="mt-s">--</span></div>
+  <div class="mt-r"><span class="mt-l">Dominant event</span><span class="mt-v" id="mt-e">--</span></div>
+  <div class="mt-r"><span class="mt-l">Market signal</span><span class="mt-v" id="mt-ms">--</span></div>
+  <div class="mt-r"><span class="mt-l">Key impact</span><span class="mt-v" id="mt-ki">--</span></div>
+</div>
+
+<script>
+// ════════ GLOBALS ════════
+let STATE={};
+let selAsset=null;
+let tradeTabName='setup';
+let activeFilter='all';
+let activeDir='buy';
+
+const ASSETS=[
+  {sym:'XAU/USD',cat:'commodities',desc:'Gold · Safe-haven precious metal',gtiDir:'buy', sens:.92,conf:84,risk:'LOW'},
+  {sym:'WTI',    cat:'commodities',desc:'Crude Oil · Energy commodity',     gtiDir:'buy', sens:.86,conf:78,risk:'MEDIUM'},
+  {sym:'LMT',    cat:'equities',   desc:'Lockheed Martin · Defense',        gtiDir:'buy', sens:.80,conf:74,risk:'MEDIUM'},
+  {sym:'SPX',    cat:'equities',   desc:'S&P 500 · Broad equity market',    gtiDir:'sell',sens:.76,conf:70,risk:'HIGH'},
+  {sym:'VIX',    cat:'equities',   desc:'CBOE VIX · Fear index',            gtiDir:'buy', sens:.96,conf:88,risk:'HIGH'},
+  {sym:'GLD',    cat:'equities',   desc:'SPDR Gold ETF · Safe haven',       gtiDir:'buy', sens:.88,conf:80,risk:'LOW'},
+  {sym:'EUR/USD',cat:'forex',      desc:'Euro/Dollar · Major pair',         gtiDir:'sell',sens:.66,conf:62,risk:'MEDIUM'},
+  {sym:'DXY',    cat:'forex',      desc:'Dollar Index · Safe haven flows',  gtiDir:'buy', sens:.72,conf:68,risk:'LOW'},
+  {sym:'USD/JPY',cat:'forex',      desc:'Dollar/Yen · Risk-off pair',       gtiDir:'sell',sens:.71,conf:65,risk:'MEDIUM'},
+  {sym:'BTC/USD',cat:'crypto',     desc:'Bitcoin · Risk-on digital asset',  gtiDir:'sell',sens:.62,conf:55,risk:'HIGH'},
+  {sym:'TLT',    cat:'equities',   desc:'20Y Treasury ETF · Bonds',         gtiDir:'buy', sens:.68,conf:60,risk:'LOW'},
+  {sym:'XAG/USD',cat:'commodities',desc:'Silver · Industrial precious metal',gtiDir:'buy',sens:.73,conf:65,risk:'MEDIUM'},
+];
+
+const BASE={
+  'XAU/USD':2341,'WTI':82.1,'LMT':485,'SPX':5218,'VIX':18.2,'GLD':215,
+  'EUR/USD':1.082,'DXY':104.2,'USD/JPY':151.4,'BTC/USD':67450,'TLT':94.2,'XAG/USD':27.8
+};
+
+function px(sym){return BASE[sym]*(1+(Math.random()-.49)*.003);}
+function conf(a,gti){return Math.min(96,Math.round(a.conf+(gti/100)*a.sens*15-5));}
+function dir(a,gti){
+  if(gti>58)return a.gtiDir;
+  if(gti<28)return a.gtiDir==='buy'?'sell':'buy';
+  return Math.random()>.55?a.gtiDir:'hold';
+}
+function fmt(v,sym){
+  if(sym==='SPX'||sym==='BTC/USD')return '$'+Math.round(v).toLocaleString();
+  if(sym.includes('/'))return v.toFixed(4);
+  if(sym==='VIX')return v.toFixed(2);
+  return '$'+v.toFixed(2);
+}
+
+// ════════ VIEW SWITCH ════════
+function switchView(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('tab-'+v).classList.add('active');
+  if(v==='earth'&&!globeReady)initGlobe();
+}
+
+// ════════ 3D GLOBE ════════
+let globeReady=false;
+let rMeshes={};
+function initGlobe(){
+  globeReady=true;
+  const wrap=document.getElementById('earth-wrap');
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(40,W/H,.1,1000);
+  cam.position.z=2.6;
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  wrap.appendChild(renderer.domElement);
+
+  // ── STARS ──
+  const sv=[];
+  for(let i=0;i<7000;i++) sv.push((Math.random()-.5)*200,(Math.random()-.5)*200,(Math.random()-.5)*200);
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.06,transparent:true,opacity:.5})));
+
+  // ── CANVAS TEXTURE with real continent outlines ──
+  const TW=2048,TH=1024;
+  const cvs=document.createElement('canvas');cvs.width=TW;cvs.height=TH;
+  const ctx=cvs.getContext('2d');
+
+  // Ocean
+  ctx.fillStyle='#061828';ctx.fillRect(0,0,TW,TH);
+
+  // Grid lines
+  ctx.strokeStyle='rgba(0,120,200,0.12)';ctx.lineWidth=1;
+  for(let lng=-180;lng<=180;lng+=30){
+    const x=(lng+180)/360*TW;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,TH);ctx.stroke();
+  }
+  for(let lat=-90;lat<=90;lat+=30){
+    const y=(90-lat)/180*TH;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(TW,y);ctx.stroke();
+  }
+
+  // lat/lon to canvas pixel
+  function ll(lat,lon){
+    return [(lon+180)/360*TW, (90-lat)/180*TH];
+  }
+
+  // Draw a polygon region
+  function poly(pts,fill,stroke,sw){
+    ctx.beginPath();
+    const [sx,sy]=ll(pts[0][0],pts[0][1]);
+    ctx.moveTo(sx,sy);
+    for(let i=1;i<pts.length;i++){const[x,y]=ll(pts[i][0],pts[i][1]);ctx.lineTo(x,y);}
+    ctx.closePath();
+    ctx.fillStyle=fill;ctx.fill();
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw||1.5;ctx.stroke();}
+  }
+
+  // Region colors — will be updated dynamically
+  const RC={
+    na:'rgba(0,130,210,0.75)',
+    sa:'rgba(0,150,80,0.75)',
+    eu:'rgba(130,50,210,0.75)',
+    ru:'rgba(150,35,190,0.75)',
+    af:'rgba(170,115,25,0.75)',
+    me:'rgba(225,45,45,0.82)',
+    as:'rgba(45,105,175,0.75)',
+    oc:'rgba(25,130,85,0.75)',
+  };
+  const RS='rgba(255,255,255,0.25)';
+
+  function drawContinents(colors){
+    const C=colors||RC;
+
+    // NORTH AMERICA
+    poly([
+      [70,-140],[72,-120],[72,-95],[68,-85],[60,-65],[50,-55],[45,-53],[42,-60],
+      [36,-75],[30,-81],[25,-90],[22,-105],[20,-87],[15,-83],[10,-85],[8,-77],
+      [8,-80],[20,-105],[28,-115],[38,-122],[48,-124],[55,-130],[60,-138],[70,-140]
+    ],C.na,RS);
+    // Alaska
+    poly([[60,-140],[68,-165],[72,-160],[72,-140],[65,-138]],C.na,RS,1);
+    // Florida
+    poly([[30,-81],[25,-80],[24,-82],[26,-90],[29,-89],[30,-85]],C.na,RS,1);
+    // Greenland
+    poly([[60,-45],[72,-22],[83,-30],[85,-60],[80,-72],[72,-75],[62,-52]],
+      'rgba(80,110,160,0.5)',RS,1);
+
+    // SOUTH AMERICA
+    poly([
+      [10,-62],[8,-60],[5,-52],[2,-50],[0,-50],[-5,-35],[-8,-35],
+      [-15,-38],[-23,-43],[-33,-53],[-38,-57],[-52,-69],[-56,-67],
+      [-42,-63],[-25,-48],[-12,-37],[0,-50],[5,-52],[10,-62]
+    ],C.sa,RS);
+
+    // EUROPE (west)
+    poly([
+      [71,26],[65,14],[62,5],[58,5],[52,2],[48,2],[43,5],[36,5],[36,14],
+      [38,27],[42,28],[44,24],[48,18],[52,14],[58,10],[65,14],[71,26]
+    ],C.eu,RS);
+    // UK
+    poly([[58,-5],[56,-2],[52,0],[51,1],[54,0],[58,-3],[60,-2]],C.eu,RS,1);
+    // Scandinavia
+    poly([[71,26],[70,20],[64,14],[62,5],[65,14],[70,16],[72,20],[71,26]],C.eu,RS,1);
+    // Iberian peninsula
+    poly([[44,-8],[42,-9],[36,-8],[36,0],[42,3],[44,-1]],C.eu,RS,1);
+    // Italy boot
+    poly([[44,8],[42,12],[38,15],[37,15],[38,16],[40,18],[44,12],[44,8]],C.eu,RS,1);
+
+    // RUSSIA / E.EUROPE + Central Asia
+    poly([
+      [71,26],[68,30],[65,35],[60,30],[52,22],[48,22],[48,40],[42,48],
+      [40,52],[42,60],[48,58],[52,60],[55,65],[55,80],[52,90],[52,100],
+      [55,100],[58,110],[58,120],[55,135],[52,140],[50,130],[45,135],
+      [42,132],[45,120],[48,100],[52,80],[58,68],[62,55],[68,35],[71,26]
+    ],C.ru,RS);
+    // Far East Russia
+    poly([[68,165],[65,145],[58,140],[55,135],[58,120],[65,130],[68,160]],C.ru,RS,1);
+
+    // AFRICA
+    poly([
+      [37,10],[32,32],[22,37],[12,42],[5,42],[0,40],[-5,38],
+      [-10,38],[-18,35],[-25,33],[-34,18],[-30,16],[-22,14],
+      [-16,12],[-5,10],[5,2],[15,-2],[22,2],[30,10],[37,10]
+    ],C.af,RS);
+    // Madagascar
+    poly([[-12,50],[-15,44],[-22,44],[-26,47],[-18,50]],C.af,RS,1);
+    // Horn of Africa
+    poly([[5,42],[8,48],[10,51],[12,44],[8,42]],C.af,RS,1);
+
+    // MIDDLE EAST + Arabian Peninsula
+    poly([
+      [38,27],[36,36],[30,32],[22,38],[15,42],[12,44],[15,50],[22,58],
+      [26,56],[28,50],[32,44],[36,36],[38,27]
+    ],C.me,RS,2);
+    // Arabian peninsula
+    poly([[28,50],[22,58],[12,44],[15,50],[20,58],[24,58],[28,56],[32,50]],C.me,RS,1.5);
+    // Turkey/Anatolia
+    poly([[42,28],[38,27],[36,36],[38,42],[40,44],[42,44],[44,38],[44,28]],
+      'rgba(200,50,50,0.65)',RS,1);
+
+    // INDIA + South Asia
+    poly([
+      [28,72],[24,68],[20,68],[15,72],[8,78],[8,80],[10,80],
+      [15,80],[20,85],[24,88],[28,88],[32,74],[28,72]
+    ],'rgba(50,110,180,0.72)',RS,1.5);
+    // Sri Lanka
+    poly([[8,80],[6,80],[6,82],[8,82]],C.as,RS,1);
+
+    // ASIA (main — China, SE, Central)
+    poly([
+      [42,48],[40,52],[42,60],[48,58],[52,60],[55,65],[52,80],[48,88],
+      [42,95],[35,100],[28,88],[24,88],[28,100],[22,112],[18,108],
+      [22,114],[28,120],[35,118],[42,125],[45,132],[50,130],[52,140],
+      [55,135],[58,140],[62,130],[65,120],[68,120],[72,95],[72,80],
+      [68,70],[62,55],[58,68],[52,58],[48,50],[42,48]
+    ],C.as,RS);
+    // Japan main island
+    poly([[40,140],[38,140],[35,132],[32,130],[34,138],[36,140],[40,142]],
+      'rgba(50,110,180,0.7)',RS,1);
+    // Japan Hokkaido
+    poly([[42,142],[44,142],[44,144],[42,144]],C.as,RS,1);
+    // Korean peninsula
+    poly([[38,125],[35,126],[34,128],[36,130],[38,128]],C.as,RS,1);
+    // Taiwan
+    poly([[25,121],[23,120],[22,121],[24,122]],C.as,RS,1);
+
+    // SE ASIA (mainland)
+    poly([
+      [22,100],[18,100],[12,100],[8,98],[4,100],[2,104],
+      [5,104],[10,106],[15,102],[20,106],[22,104],[22,100]
+    ],C.as,RS,1);
+    // Philippines
+    poly([[18,122],[16,120],[12,120],[10,122],[14,124],[18,124]],C.as,RS,1);
+    // Borneo/Indonesia islands (simplified)
+    poly([[4,108],[0,108],[0,116],[4,116],[6,112]],C.as,RS,1);
+    poly([[-2,108],[-6,106],[-8,112],[-6,116],[-2,114]],C.as,RS,1);
+    poly([[0,120],[-2,118],[-4,122],[-2,124],[2,122]],C.as,RS,1);
+
+    // OCEANIA / Australia
+    poly([
+      [-15,130],[-22,114],[-32,115],[-32,118],[-34,122],[-36,136],
+      [-38,140],[-38,148],[-36,150],[-28,154],[-22,150],[-18,146],
+      [-14,136],[-12,130],[-15,130]
+    ],C.oc,RS);
+    // New Zealand - North Island
+    poly([[-36,174],[-38,176],[-40,176],[-38,178],[-36,174]],C.oc,RS,1);
+    // New Zealand - South Island
+    poly([[-42,171],[-44,168],[-46,168],[-46,172],[-44,174],[-42,173]],C.oc,RS,1);
+    // Papua New Guinea
+    poly([[-2,132],[-6,140],[-8,148],[-4,146],[-2,140]],C.oc,RS,1);
+  }
+
+  drawContinents();
+
+  // Equator and tropics
+  ctx.strokeStyle='rgba(0,200,255,0.15)';ctx.lineWidth=1.5;
+  [[0,'equator'],[23.5,'tropic'],[-23.5,'tropic']].forEach(([lat])=>{
+    const y=(90-lat)/180*TH;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(TW,y);ctx.stroke();
+  });
+
+  // ── BUILD GLOBE WITH TEXTURE ──
+  const texture=new THREE.CanvasTexture(cvs);
+  const geo=new THREE.SphereGeometry(1,64,64);
+  const mat=new THREE.MeshPhongMaterial({
+    map:texture,transparent:false,shininess:12,
+    specular:new THREE.Color(0x112233)
+  });
+  const globe=new THREE.Mesh(geo,mat);scene.add(globe);
+
+  // Store canvas ctx for dynamic color updates
+  globe.userData={ctx,cvs,texture,drawContinents};
+
+  // Thin atmosphere glow
+  const aMat=new THREE.MeshPhongMaterial({
+    color:0x0033aa,transparent:true,opacity:.10,side:THREE.FrontSide,
+    depthWrite:false
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.03,64,64),aMat));
+
+  // Cloud layer (subtle)
+  const cloudMat=new THREE.MeshPhongMaterial({
+    color:0xffffff,transparent:true,opacity:.06,
+    depthWrite:false,side:THREE.FrontSide
+  });
+  const clouds=new THREE.Mesh(new THREE.SphereGeometry(1.015,64,64),cloudMat);
+  scene.add(clouds);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x334466,1.4));
+  const dl=new THREE.DirectionalLight(0x88aaff,1.8);
+  dl.position.set(5,3,5);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0x001133,0.5);
+  dl2.position.set(-3,-2,-3);scene.add(dl2);
+
+  // ── RAYCASTER for region click/hover ──
+  const raycaster=new THREE.Raycaster();
+  const mouse=new THREE.Vector2();
+  const canvas=renderer.domElement;
+
+  function getRegionFromUV(uv){
+    const lon=(uv.x*360)-180;
+    const lat=90-(uv.y*180);
+    // Hit test regions by lat/lon bounding boxes
+    const regions=[
+      {key:'middle_east',  label:'Middle East',   lat:[12,42], lon:[27,62]},
+      {key:'europe',       label:'Europe',         lat:[36,71], lon:[-10,40]},
+      {key:'africa',       label:'Africa',         lat:[-35,37],lon:[-18,52]},
+      {key:'north_america',label:'North America',  lat:[8,72],  lon:[-170,-50]},
+      {key:'south_america',label:'South America',  lat:[-56,12],lon:[-82,-34]},
+      {key:'asia',         label:'Asia',           lat:[0,72],  lon:[42,180]},
+      {key:'oceania',      label:'Oceania',        lat:[-46,-2],lon:[110,180]},
+    ];
+    for(const r of regions){
+      if(lat>=r.lat[0]&&lat<=r.lat[1]&&lon>=r.lon[0]&&lon<=r.lon[1]) return r;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('click',e=>{
+    const rect=canvas.getBoundingClientRect();
+    mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse,cam);
+    const hits=raycaster.intersectObject(globe);
+    if(hits.length>0){
+      const uv=hits[0].uv;
+      const region=getRegionFromUV(uv);
+      if(region){
+        showRegionDetail(region.label,region.key);
+        switchView('map');
+        setTimeout(()=>switchView('earth'),100);
+        // Show tooltip
+        showGlobeTooltip(region,e.clientX,e.clientY);
+      }
+    }
+  });
+
+  canvas.addEventListener('mousemove',e=>{
+    const rect=canvas.getBoundingClientRect();
+    mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse,cam);
+    const hits=raycaster.intersectObject(globe);
+    if(hits.length>0){
+      const region=getRegionFromUV(hits[0].uv);
+      canvas.style.cursor=region?'pointer':'default';
+      if(region) showGlobeHoverTip(region,e.clientX,e.clientY);
+      else hideGlobeTip();
+    } else {
+      canvas.style.cursor='default';
+      hideGlobeTip();
+    }
+  });
+  canvas.addEventListener('mouseleave',hideGlobeTip);
+
+  // ── DRAG ROTATION ──
+  let drag=false,prev={x:0,y:0},vel={x:0,y:.0008},moved=false;
+  canvas.addEventListener('mousedown',e=>{drag=true;moved=false;prev={x:e.clientX,y:e.clientY};});
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const dx=e.clientX-prev.x,dy=e.clientY-prev.y;
+    if(Math.abs(dx)>2||Math.abs(dy)>2)moved=true;
+    vel.y+=dx*.005;vel.x+=dy*.005;
+    prev={x:e.clientX,y:e.clientY};
+  });
+
+  // ── ANIMATE ──
+  function animate(){
+    requestAnimationFrame(animate);
+    if(!drag){vel.y*=.96;vel.x*=.96;vel.y+=.0006;}
+    globe.rotation.y+=vel.y;
+    globe.rotation.x=Math.max(-.45,Math.min(.45,globe.rotation.x+vel.x));
+    clouds.rotation.y=globe.rotation.y+.0003;
+    clouds.rotation.x=globe.rotation.x;
+    renderer.render(scene,cam);
+  }
+  animate();
+
+  // ── DYNAMIC COLOR UPDATE ──
+  // Store reference for updateGlobeColors
+  window._globeCtx=ctx;
+  window._globeCvs=cvs;
+  window._globeTexture=texture;
+  window._drawContinents=drawContinents;
+
+  window.addEventListener('resize',()=>{
+    const nW=wrap.clientWidth,nH=wrap.clientHeight;
+    cam.aspect=nW/nH;cam.updateProjectionMatrix();renderer.setSize(nW,nH);
+  });
+}
+
+// ── GLOBE TOOLTIP (separate from map tip) ──
+function showGlobeHoverTip(region,x,y){
+  const rs=STATE.region_scores||{};
+  const v=rs[region.key]||0;
+  const arts=(STATE.articles||[]).filter(a=>a.region===region.key);
+  document.getElementById('mt-h').textContent=region.label;
+  document.getElementById('mt-s').textContent=v.toFixed(0)+'/100';
+  const sig=v>70?'BEARISH':v>35?'NEUTRAL':'BULLISH';
+  const sc=v>70?'var(--danger)':v>35?'var(--warn)':'var(--success)';
+  document.getElementById('mt-ms').textContent=sig;
+  document.getElementById('mt-ms').style.color=sc;
+  document.getElementById('mt-e').textContent=arts[0]?.event_type||'—';
+  document.getElementById('mt-ki').textContent=v>65?'XAU/USD ↑ · OIL ↑ · SPX ↓':v>35?'VIX ↑ · Watch DXY':'SPX ↑ · Havens ↓';
+  const tip=document.getElementById('maptip');
+  tip.style.display='block';
+  tip.style.left=(x+16)+'px';tip.style.top=(y-12)+'px';
+}
+function showGlobeTooltip(region,x,y){showGlobeHoverTip(region,x,y);}
+function hideGlobeTip(){document.getElementById('maptip').style.display='none';}
+
+// ── UPDATE GLOBE COLORS via canvas texture ──
+function updateGlobeColors(rs){
+  if(!window._globeCtx)return;
+  const ctx=window._globeCtx;
+  const TW=2048,TH=1024;
+
+  function tensionColor(v,alpha){
+    if(v>80)return `rgba(220,30,50,${alpha})`;
+    if(v>60)return `rgba(210,80,0,${alpha})`;
+    if(v>35)return `rgba(180,130,0,${alpha})`;
+    return `rgba(0,140,80,${alpha})`;
+  }
+
+  const colors={
+    na: tensionColor(rs.north_america||0,.78),
+    sa: tensionColor(rs.south_america||0,.72),
+    eu: tensionColor(rs.europe||0,.78),
+    ru: tensionColor(rs.europe||0,.72),
+    af: tensionColor(rs.africa||0,.75),
+    me: tensionColor(rs.middle_east||0,.88),
+    as: tensionColor(rs.asia||0,.75),
+    oc: tensionColor(rs.oceania||0,.7),
+  };
+
+  // Redraw ocean
+  ctx.fillStyle='#061828';ctx.fillRect(0,0,TW,TH);
+
+  // Redraw grid
+  ctx.strokeStyle='rgba(0,120,200,0.1)';ctx.lineWidth=1;
+  for(let lng=-180;lng<=180;lng+=30){
+    const x=(lng+180)/360*TW;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,TH);ctx.stroke();
+  }
+  for(let lat=-90;lat<=90;lat+=30){
+    const y=(90-lat)/180*TH;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(TW,y);ctx.stroke();
+  }
+
+  window._drawContinents(colors);
+
+  // Equator
+  ctx.strokeStyle='rgba(0,200,255,0.15)';ctx.lineWidth=1.5;
+  const ey=TH/2;ctx.beginPath();ctx.moveTo(0,ey);ctx.lineTo(TW,ey);ctx.stroke();
+
+  window._globeTexture.needsUpdate=true;
+}
+initGlobe();
+
+function colForRegion(k){
+  const m={north_america:0x1a6bc0,south_america:0x1a9060,europe:0x8b2fc9,africa:0xb07830,middle_east:0xcc3333,asia:0x336699,oceania:0x1a7a5a};
+  return m[k]||0x336699;
+}
+
+function updateGlobeColors(rs){
+  if(!rMeshes)return;
+  Object.entries(rMeshes).forEach(([k,m])=>{
+    const v=rs[k]||0;
+    const c=new THREE.Color(v>80?0xff2040:v>60?0xff5500:v>35?0xffaa00:0x00aa44);
+    m.material.color=c;m.material.emissive=c;
+    m.material.emissiveIntensity=.25+v/100*.65;
+    const s=1+v/100*.7;m.scale.set(s,s,s);
+  });
+}
+
+// ════════ MAP COLORS ════════
+const rSel={
+  north_america:'#r-na',south_america:'#r-sa',
+  europe:'#r-eu,#r-ru',africa:'#r-af',middle_east:'#r-me',
+  asia:'#r-as,#r-sea,#r-india',oceania:'#r-oc'
+};
+const rFills={
+  north_america:'0,120,200',south_america:'0,140,80',europe:'120,40,200',
+  africa:'160,110,30',middle_east:'220,40,40',asia:'40,100,170',oceania:'20,120,80'
+};
+const rCenters={
+  north_america:{x:310,y:190},south_america:{x:320,y:525},europe:{x:930,y:130},
+  africa:{x:940,y:425},middle_east:{x:1170,y:262},asia:{x:1740,y:268},oceania:{x:1800,y:640}
+};
+
+function updateMapColors(rs){
+  Object.entries(rs).forEach(([k,v])=>{
+    const sel=rSel[k];if(!sel)return;
+    const base=rFills[k]||'80,120,160';
+    const a=.3+v/100*.52;
+    const sc=v>80?`rgba(255,30,50,${.55+v/300})`:v>60?`rgba(255,100,0,${.5+v/250})`:v>35?`rgba(255,170,0,.42)`:`rgba(0,180,255,.32)`;
+    sel.split(',').forEach(s=>{
+      const el=document.querySelector(s.trim());if(!el)return;
+      el.setAttribute('fill',`rgba(${base},${a})`);el.setAttribute('stroke',sc);
+      el.setAttribute('stroke-width',v>70?'2.5':v>40?'2':'1.5');
+      el.style.filter=v>70?`drop-shadow(0 0 14px rgba(255,51,85,.55))`:v>40?`drop-shadow(0 0 8px rgba(255,170,0,.3))`:'none';
+    });
+  });
+  // Hotspots
+  const g=document.getElementById('map-hotspots');g.innerHTML='';
+  Object.entries(rs).forEach(([k,v])=>{
+    if(v<25)return;
+    const c=rCenters[k];if(!c)return;
+    const col=v>80?'#ff2040':v>60?'#ff6600':v>35?'#ffaa00':'#00c8ff';
+    const d=Math.random()*1.8;
+    g.innerHTML+=`<circle cx="${c.x}" cy="${c.y}" r="7" fill="${col}" opacity=".9"/>
+      <circle cx="${c.x}" cy="${c.y}" r="10" fill="none" stroke="${col}" stroke-width="2" opacity=".7" style="animation:hotpulse 2.2s ${d}s ease-out infinite"/>
+      <circle cx="${c.x}" cy="${c.y}" r="10" fill="none" stroke="${col}" stroke-width="1" opacity=".35" style="animation:hotpulse 2.2s ${d+1.1}s ease-out infinite"/>`;
+  });
+}
+
+// ════════ MAP INTERACTION ════════
+const tip=document.getElementById('maptip');
+document.querySelectorAll('.r-path').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    const k=el.dataset.region,rs=STATE.region_scores||{},v=rs[k]||0;
+    const arts=(STATE.articles||[]).filter(a=>a.region===k);
+    document.getElementById('mt-h').textContent=el.dataset.label;
+    document.getElementById('mt-s').textContent=v.toFixed(0)+'/100';
+    const sig=v>70?'BEARISH':v>35?'NEUTRAL':'BULLISH';
+    const sc=v>70?'var(--danger)':v>35?'var(--warn)':'var(--success)';
+    document.getElementById('mt-ms').textContent=sig;document.getElementById('mt-ms').style.color=sc;
+    document.getElementById('mt-e').textContent=arts[0]?.event_type||'—';
+    document.getElementById('mt-ki').textContent=v>65?'XAU/USD ↑ · OIL ↑ · SPX ↓':v>35?'VIX ↑ · DXY watch':'SPX ↑ · Havens ↓';
+    tip.style.display='block';
+  });
+  el.addEventListener('mousemove',e=>{tip.style.left=(e.clientX+16)+'px';tip.style.top=(e.clientY-12)+'px';});
+  el.addEventListener('mouseleave',()=>tip.style.display='none');
+  el.addEventListener('click',()=>{showRegionDetail(el.dataset.label,el.dataset.region);tip.style.display='none';});
+});
+
+function showRegionDetail(label,key){
+  const rs=STATE.region_scores||{},v=rs[key]||0;
+  const arts=(STATE.articles||[]).filter(a=>a.region===key).slice(0,6);
+  const col=v>70?'var(--danger)':v>35?'var(--warn)':'var(--success)';
+  document.getElementById('m-detail').innerHTML=`
+    <div style="margin-bottom:14px">
+      <div style="font-family:var(--hfont);font-size:15px;font-weight:700;color:${col};margin-bottom:5px">${label}</div>
+      <div style="font-size:11px;color:var(--muted)">Tension: <span style="color:${col};font-weight:700">${v.toFixed(0)}/100</span></div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:5px;padding:12px;margin-bottom:14px">
+      <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">MARKET IMPACT</div>
+      ${v>60?`
+        <div class="reg-impact-row"><span style="color:var(--success)">▲</span> XAU/USD — Safe haven bid</div>
+        <div class="reg-impact-row"><span style="color:var(--success)">▲</span> OIL — Supply risk premium</div>
+        <div class="reg-impact-row"><span style="color:var(--danger)">▼</span> SPX — Risk-off pressure</div>
+        <div class="reg-impact-row"><span style="color:var(--success)">▲</span> DXY — Flight to dollar</div>
+      `:v>35?`
+        <div class="reg-impact-row"><span style="color:var(--warn)">→</span> Markets on elevated watch</div>
+        <div class="reg-impact-row"><span style="color:var(--warn)">→</span> VIX likely to spike</div>
+      `:`
+        <div class="reg-impact-row"><span style="color:var(--success)">▲</span> SPX — Risk-on environment</div>
+        <div class="reg-impact-row"><span style="color:var(--danger)">▼</span> Safe havens — Reduced bid</div>
+      `}
+    </div>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">LIVE EVENTS</div>
+    ${arts.length?arts.map(a=>`
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--accent);margin-bottom:3px">${a.source||''}</div>
+        <div style="font-size:11px;line-height:1.45">${a.title||''}</div>
+      </div>`).join(''):`<div style="font-size:11px;color:var(--muted)">No articles for this region</div>`}
+  `;
+}
+
+// ════════ CANDLESTICK CHART ════════
+let candleCtx=null;
+function renderCandles(sym,canvasId){
+  const canvas=document.getElementById(canvasId);if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;
+  const W=canvas.width,H=canvas.height;
+  const base=BASE[sym]||100;
+  // Generate OHLC bars
+  const bars=[];let p=base*(.97+Math.random()*.02);
+  for(let i=0;i<32;i++){
+    const o=p;
+    const chg=(Math.random()-.49)*.012;
+    const c=o*(1+chg);
+    const h=Math.max(o,c)*(1+Math.random()*.006);
+    const l=Math.min(o,c)*(1-Math.random()*.006);
+    bars.push({o,h,l,c});p=c;
+  }
+  const prices=bars.flatMap(b=>[b.h,b.l]);
+  const minP=Math.min(...prices),maxP=Math.max(...prices),rng=maxP-minP||1;
+  const pad=28;const chartH=H-pad*2;const chartW=W-50;
+  const bw=Math.floor(chartW/bars.length*.7);
+  const gap=Math.floor(chartW/bars.length);
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid lines
+  ctx.strokeStyle='rgba(0,150,200,0.08)';ctx.lineWidth=.5;
+  for(let i=0;i<=4;i++){
+    const y=pad+chartH*i/4;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    const v=maxP-rng*i/4;
+    ctx.fillStyle='rgba(100,150,180,0.6)';ctx.font='9px Share Tech Mono';
+    ctx.fillText(v>=1000?v.toFixed(0):v.toFixed(3),W-46,y+3);
+  }
+
+  // Candles
+  bars.forEach((b,i)=>{
+    const x=20+i*gap;
+    const bull=b.c>=b.o;
+    const col=bull?'#00e676':'#ff3355';
+    const oY=pad+chartH*(1-(b.o-minP)/rng);
+    const cY=pad+chartH*(1-(b.c-minP)/rng);
+    const hY=pad+chartH*(1-(b.h-minP)/rng);
+    const lY=pad+chartH*(1-(b.l-minP)/rng);
+    // Wick
+    ctx.strokeStyle=col;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(x+bw/2,hY);ctx.lineTo(x+bw/2,lY);ctx.stroke();
+    // Body
+    ctx.fillStyle=bull?col:'rgba(255,51,85,0.85)';
+    const bodyY=Math.min(oY,cY),bodyH=Math.max(Math.abs(cY-oY),2);
+    ctx.fillRect(x,bodyY,bw,bodyH);
+    if(!bull){ctx.strokeStyle=col;ctx.lineWidth=.8;ctx.strokeRect(x,bodyY,bw,bodyH);}
+  });
+
+  // Last price line
+  const lastBar=bars[bars.length-1];
+  const lastY=pad+chartH*(1-(lastBar.c-minP)/rng);
+  ctx.strokeStyle='rgba(255,170,0,0.5)';ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,lastY);ctx.lineTo(W-50,lastY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,170,0,0.9)';ctx.font='bold 10px Share Tech Mono';
+  ctx.fillText(lastBar.c>=1000?lastBar.c.toFixed(0):lastBar.c.toFixed(3),W-48,lastY+4);
+
+  // Time labels
+  ctx.fillStyle='rgba(100,150,180,0.5)';ctx.font='9px Share Tech Mono';
+  [0,8,16,24,31].forEach(i=>{
+    if(!bars[i])return;
+    const x=20+i*gap;
+    const h=new Date();h.setHours(h.getHours()-31+i);
+    ctx.fillText(h.getHours()+':00',x,H-6);
+  });
+}
+
+// ════════ ASSET SIGNALS ════════
+function filterA(cat,el){
+  activeFilter=cat;
+  document.querySelectorAll('.ftab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');renderAssets();
+}
+function filterD(d,el){
+  activeDir=d;
+  document.querySelectorAll('.dtab').forEach(e=>{e.classList.remove('ab','as');});
+  if(d==='buy')el.classList.add('ab');else if(d==='sell')el.classList.add('as');
+  renderAssets();
+}
+
+function renderAssets(){
+  const gti=STATE.gti_score||50;
+  let list=ASSETS.map(a=>({...a,c:conf(a,gti),d:dir(a,gti),p:px(a.sym)}));
+  if(activeFilter!=='all')list=list.filter(a=>a.cat===activeFilter);
+  if(activeDir!=='all')list=list.filter(a=>a.d===activeDir);
+  document.getElementById('asset-list').innerHTML=list.map(a=>{
+    const cc=a.c>75?'var(--success)':a.c>55?'var(--warn)':'var(--danger)';
+    const badge=a.d==='buy'?`<span class="buy-b">BUY</span>`:a.d==='sell'?`<span class="sell-b">SELL</span>`:`<span class="hold-b">HOLD</span>`;
+    return `<div class="asset-item${selAsset===a.sym?' selected':''}" onclick="selA('${a.sym}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:8px"><div class="a-sym">${a.sym}</div>${badge}</div>
+        <div class="a-conf" style="color:${cc}">${a.c}%</div>
+      </div>
+      <div class="a-desc">${a.desc}</div>
+      <div class="a-bars">
+        <div class="a-bar-row"><span class="a-bl">Bull</span><div class="a-bt"><div class="a-bf" style="width:${a.d==='buy'?a.c:100-a.c}%;background:var(--success)"></div></div></div>
+        <div class="a-bar-row"><span class="a-bl">Bear</span><div class="a-bt"><div class="a-bf" style="width:${a.d==='sell'?a.c:100-a.c}%;background:var(--danger)"></div></div></div>
+      </div>
+      <div class="a-trig">↳ GTI escalation · Risk: <span style="color:${a.risk==='LOW'?'var(--success)':a.risk==='HIGH'?'var(--danger)':'var(--warn)'}">${a.risk}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function selA(sym){
+  selAsset=sym;renderAssets();showAsset(sym);
+  document.getElementById('ttabs').style.display='flex';
+}
+
+function showAsset(sym){
+  const gti=STATE.gti_score||50;
+  const a=ASSETS.find(x=>x.sym===sym);if(!a)return;
+  const p=px(sym),c=conf(a,gti),d=dir(a,gti);
+  const entry=p,stop=d==='buy'?p*.973:p*1.027,target=d==='buy'?p*1.048:p*.952;
+  const rr=Math.abs((target-entry)/(stop-entry));
+  const chgPct=(p/BASE[sym]-1)*100;
+  const cc=c>75?'var(--success)':c>55?'var(--warn)':'var(--danger)';
+  const badge=d==='buy'?`<span class="buy-b">BUY</span>`:d==='sell'?`<span class="sell-b">SELL</span>`:`<span style="background:rgba(255,170,0,.12);color:var(--warn);border:1px solid rgba(255,170,0,.3);font-size:10px;padding:2px 8px;border-radius:3px;font-weight:700">HOLD</span>`;
+
+  document.getElementById('smh').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="sm-sym">${sym}</div>${badge}
+        </div>
+        <div class="sm-cat">${a.cat.toUpperCase()} · ${a.desc.split('·')[1]?.trim()||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--hfont);font-size:24px;font-weight:800;color:${d==='buy'?'var(--success)':'var(--danger)'}">
+          ${chgPct>=0?'+':''}${chgPct.toFixed(2)}%
+        </div>
+        <div style="font-size:10px;color:var(--muted)">Price change</div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span>${c}% Bullish Strength</span><span style="color:var(--muted)">${100-c}% Uncertainty</span>
+      </div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${c}%;background:${cc}"></div></div>
+    </div>
+    <div style="margin-top:10px;background:rgba(255,51,85,.05);border:1px solid rgba(255,51,85,.18);border-radius:5px;padding:8px 10px">
+      <div style="font-size:9px;color:var(--danger);letter-spacing:1px;margin-bottom:4px">MEDIUM VOLATILITY · SHORT-TERM · TRIGGERING EVENT</div>
+      <div style="font-size:11px">${(STATE.narratives&&STATE.narratives[0]?.label)||'Geopolitical escalation — GTI driven signal'}</div>
+    </div>`;
+
+  renderTradeTab(sym,a,p,entry,stop,target,rr,c,d);
+}
+
+function tradeTab(tab,el){
+  tradeTabName=tab;
+  document.querySelectorAll('.ttab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  if(selAsset)showAsset(selAsset);
+}
+
+function renderTradeTab(sym,a,p,entry,stop,target,rr,c,d){
+  const gti=STATE.gti_score||50;
+  const atR=Math.abs((target-entry)/entry*100),maxR=Math.abs((stop-entry)/entry*100);
+  const cc=c>75?'var(--success)':c>55?'var(--warn)':'var(--danger)';
+
+  if(tradeTabName==='setup'){
+    document.getElementById('tbody').innerHTML=`
+      <div class="trade-grid">
+        <div class="tg-cell"><div class="tg-label">CURRENT PRICE</div><div class="tg-val tg-entry">${fmt(p,sym)}</div></div>
+        <div class="tg-cell"><div class="tg-label">ENTRY</div><div class="tg-val tg-entry">${fmt(entry,sym)}</div></div>
+        <div class="tg-cell"><div class="tg-label">STOP LOSS</div><div class="tg-val tg-stop">${fmt(stop,sym)}</div></div>
+        <div class="tg-cell"><div class="tg-label">TARGET</div><div class="tg-val tg-target">${fmt(target,sym)}</div></div>
+        <div class="tg-cell"><div class="tg-label">RISK / REWARD</div><div class="tg-val tg-rr">${rr.toFixed(2)}×</div></div>
+        <div class="tg-cell"><div class="tg-label">ATR DAILY</div><div class="tg-val">${atR.toFixed(2)}%</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-hdr">
+          <span style="font-family:var(--hfont);font-size:13px">${sym}</span>
+          <span style="color:var(--accent)">1H Candlestick · GTI Overlay</span>
+        </div>
+        <div id="candle-wrap" style="position:relative;width:100%;height:190px;">
+          <canvas id="candle-cv" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+        </div>
+      </div>
+      <div class="tg-cell" style="margin-bottom:12px">
+        <div class="tg-label">MAX RISK EXPOSURE</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin:8px 0 4px">
+          <span style="color:var(--danger)">Risk: ${maxR.toFixed(2)}%</span>
+          <span style="color:var(--muted)">+${atR.toFixed(2)}% reward</span>
+        </div>
+        <div style="height:6px;background:rgba(255,51,85,.1);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(maxR*8,100)}%;background:var(--danger);border-radius:3px"></div>
+        </div>
+      </div>`;
+    setTimeout(()=>renderCandles(sym,'candle-cv'),50);
+
+  }else if(tradeTabName==='ai'){
+    document.getElementById('tbody').innerHTML=`
+      <div style="background:rgba(255,51,85,.04);border:1px solid rgba(255,51,85,.18);border-radius:5px;padding:12px;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--danger);letter-spacing:1px;margin-bottom:8px">AI ANALYSIS</div>
+        <div style="font-size:12px;line-height:1.7">Safe haven flows increasing due to elevated geopolitical stress. GTI score of <strong style="color:var(--warn)">${gti.toFixed(1)}</strong> indicates ${gti>70?'critical':'elevated'} global tension. ${a.gtiDir==='buy'?'Bullish':'Bearish'} bias confirmed by FinBERT sentiment model (stress: ${Math.round((STATE.stress||.5)*100)}%). LightGBM classifier: <strong style="color:${cc}">${d.toUpperCase()}</strong> with ${c}% confidence.</div>
+      </div>
+      <div style="background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:5px;padding:12px;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">SECTOR EXPOSURE</div>
+        ${['Energy','Defense','Commodities','Financials','Technology'].map((s,i)=>`
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+              <span>${s}</span><span style="color:var(--accent)">${[78,65,82,45,38][i]}%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${[78,65,82,45,38][i]}%;background:var(--accent);border-radius:2px"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div style="background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:5px;padding:12px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">RISK FACTORS</div>
+        ${['Sudden de-escalation event','Strong USD rate reversal','Central bank surprise decision','EM contagion spillover'].map(r=>`
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:7px;color:var(--muted)">
+            <span style="color:var(--danger)">—</span>${r}
+          </div>`).join('')}
+      </div>`;
+
+  }else if(tradeTabName==='chart'){
+    document.getElementById('tbody').innerHTML=`
+      <div class="chart-box" style="height:300px">
+        <div class="chart-hdr">
+          <span style="font-family:var(--hfont);font-size:14px">${sym}</span>
+          <span style="color:var(--accent)">4H Candlestick · GTI Correlation</span>
+        </div>
+        <div style="position:relative;width:100%;height:240px">
+          <canvas id="candle-cv" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7">
+        GTI correlation: <span style="color:${c>70?'var(--success)':'var(--warn)'}">${c>70?'Strong':'Moderate'}</span> positive correlation with geopolitical stress.
+        Current stress index: ${Math.round((STATE.stress||.5)*100)}% · Severity: ${Math.round((STATE.severity||.5)*100)}%
+      </div>`;
+    setTimeout(()=>renderCandles(sym,'candle-cv'),50);
+
+  }else{
+    const rel=Math.round(55+c*.32);
+    document.getElementById('tbody').innerHTML=`
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:5px;padding:20px;margin-bottom:14px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">MODEL RELIABILITY</div>
+        <div style="font-family:var(--hfont);font-size:52px;font-weight:800;color:${rel>70?'var(--success)':'var(--warn)'}">${rel}%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Based on ${Math.floor(Math.random()*200+120)} backtested geopolitical events</div>
+      </div>
+      <div class="trade-grid">
+        <div class="tg-cell"><div class="tg-label">WIN RATE</div><div class="tg-val tg-entry">${Math.round(rel*.88)}%</div></div>
+        <div class="tg-cell"><div class="tg-label">AVG R:R</div><div class="tg-val tg-rr">${(1.4+Math.random()*.8).toFixed(1)}×</div></div>
+        <div class="tg-cell"><div class="tg-label">MAX DRAWDOWN</div><div class="tg-val tg-stop">${(Math.random()*8+4).toFixed(1)}%</div></div>
+        <div class="tg-cell"><div class="tg-label">SHARPE RATIO</div><div class="tg-val tg-target">${(1+Math.random()*.8).toFixed(2)}</div></div>
+      </div>`;
+  }
+}
+
+// Mini signals right panel
+function renderMini(){
+  const gti=STATE.gti_score||50;
+  document.getElementById('all-mini').innerHTML=ASSETS.slice(0,8).map(a=>{
+    const c=conf(a,gti),d=dir(a,gti),p=px(a.sym);
+    const chg=(Math.random()-.48)*.8;
+    const cc=c>75?'var(--success)':c>55?'var(--warn)':'var(--danger)';
+    const badge=d==='buy'?`<span class="buy-b">BUY</span>`:`<span class="sell-b">SELL</span>`;
+    return `<div class="sig-item" onclick="selA('${a.sym}');switchView('signals')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px"><span class="si-sym">${a.sym}</span>${badge}</div>
+        <div><div class="si-price">${fmt(p,a.sym)}</div><div class="si-chg ${chg>=0?'c-bull':'c-bear'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;color:var(--muted)">Confidence</div>
+        <div class="si-conf" style="color:${cc}">${c}%</div>
+      </div>
+      <div class="si-bar"><div class="si-fill" style="width:${c}%;background:${cc}"></div></div>
+      <div class="si-note">↳ ${(STATE.narratives&&STATE.narratives[0]?.label.slice(0,42))||'GTI-driven signal'}...</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════ MAIN UPDATE ════════
+function updateAll(s){
+  if(!s||!s.last_updated)return;
+  STATE=s;
+  const gti=s.gti_score||0;
+  const col=gti>70?'var(--danger)':gti>40?'var(--warn)':'var(--success)';
+
+  document.getElementById('t-score').textContent=gti.toFixed(1);
+  document.getElementById('t-score').style.color=col;
+  const delta=+(Math.random()-.42)*.6;
+  document.getElementById('t-delta').textContent=(delta>=0?'+':'')+delta.toFixed(1);
+  document.getElementById('t-delta').style.color=delta>=0?'var(--success)':'var(--danger)';
+  document.getElementById('t-label').textContent=gti>70?'CRITICAL':gti>40?'ELEVATED':'LOW';
+  document.getElementById('t-label').style.color=col;
+  document.getElementById('t-label').style.background=gti>70?'rgba(255,51,85,.12)':'rgba(255,170,0,.12)';
+  document.getElementById('globe-gti').textContent=gti.toFixed(1);
+  document.getElementById('t-feeds').textContent=`${(s.articles||[]).length} feeds`;
+  const t=new Date(s.last_updated);
+  document.getElementById('t-time').textContent=t.toUTCString().slice(17,25)+' UTC';
+
+  // Narratives
+  document.getElementById('e-narr').innerHTML=(s.narratives||[]).slice(0,4).map(n=>`
+    <div class="narr-item"><div class="narr-count">${n.article_count} ARTICLES</div><div class="narr-label">${n.label}</div></div>`).join('');
+
+  // Signal bars
+  const bars=[
+    {l:'Stress',v:Math.round((s.stress||0)*100),c:'var(--danger)'},
+    {l:'Severity',v:Math.round((s.severity||0)*100),c:'var(--warn)'},
+    {l:'Vol prob',v:s.volatility_prob||0,c:'var(--accent)'},
+  ];
+  document.getElementById('e-bars').innerHTML=bars.map(b=>`
+    <div class="bar-row"><span class="bl">${b.l}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${b.v}%;background:${b.c}"></div></div>
+      <span class="bv" style="color:${b.c}">${b.v}%</span>
+    </div>`).join('');
+
+  const rs=s.region_scores||{};
+  updateGlobeColors(rs);
+  updateMapColors(rs);
+
+  // Region heat bars map panel
+  document.getElementById('m-rheat').innerHTML=Object.entries(rs).map(([r,v])=>{
+    const c=v>70?'var(--danger)':v>40?'var(--warn)':'var(--accent)';
+    return `<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--muted)">${r.replace('_',' ').toUpperCase()}</span><span style="color:${c};font-weight:600">${v.toFixed(0)}</span>
+      </div>
+      <div style="height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${v}%;background:${c};border-radius:2px;transition:width 1s"></div>
+      </div>
+    </div>`;}).join('');
+
+  // Earth signals
+  document.getElementById('e-signals').innerHTML=ASSETS.slice(0,7).map(a=>{
+    const c=conf(a,gti),d=dir(a,gti),p=px(a.sym);
+    const chg=(Math.random()-.48)*.8;
+    const cc=c>75?'var(--success)':c>55?'var(--warn)':'var(--danger)';
+    const badge=d==='buy'?`<span class="buy-b">BUY</span>`:`<span class="sell-b">SELL</span>`;
+    return `<div class="sig-item" onclick="selA('${a.sym}');switchView('signals')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:8px"><span class="si-sym">${a.sym}</span>${badge}</div>
+        <div><div class="si-price">${fmt(p,a.sym)}</div><div class="si-chg ${chg>=0?'c-bull':'c-bear'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div></div>
+      </div>
+      <div class="si-bar"><div class="si-fill" style="width:${c}%;background:${cc}"></div></div>
+      <div class="si-note">Confidence: ${c}% · ${(s.narratives&&s.narratives[0]?.label.slice(0,40))||'GTI signal'}...</div>
+    </div>`;}).join('');
+
+  renderAssets();
+  renderMini();
+
+  // Bottom bar
+  document.getElementById('bb-gti').textContent=gti.toFixed(1);
+  document.getElementById('bb-gti').style.color=col;
+  document.getElementById('bb-dots').innerHTML=
+    Array.from({length:10},(_,i)=>{const v=gti*(.85+i*.015);return `<div style="width:3px;height:${3+v/8}px;background:${v>70?'var(--danger)':v>40?'var(--warn)':'var(--success)'};border-radius:1px"></div>`;}).join('');
+
+  const evs=(s.articles||[]).slice(0,10).map(a=>`
+    <div class="bb-ev">
+      <div class="bb-dot" style="background:${(a.stress_score||0)>.7?'var(--danger)':(a.stress_score||0)>.4?'var(--warn)':'var(--success)'}"></div>
+      <span class="bb-loc">${(a.region||'').replace('_',' ').toUpperCase()} —</span>
+      <span>${(a.title||'').slice(0,55)}...</span>
+      <span class="${(a.stress_score||0)>.7?'sev-c':(a.stress_score||0)>.4?'sev-h':'sev-m'}">${(a.stress_score||0)>.7?'CRITICAL':(a.stress_score||0)>.4?'HIGH':'MEDIUM'}</span>
+    </div>`).join('');
+  document.getElementById('bb-tape').innerHTML=evs+evs;
+}
+
+// ════════ CONNECT ════════
+function connect(){
+  const ws=new WebSocket('ws://localhost:8000/ws');
+  ws.onmessage=e=>updateAll(JSON.parse(e.data));
+  ws.onclose=()=>setTimeout(connect,3000);
+  ws.onerror=()=>ws.close();
+}
+async function poll(){
+  try{const r=await fetch('http://localhost:8000/state');updateAll(await r.json());}catch(e){}
+}
+connect();
+setInterval(poll,12000);
+poll();
+setInterval(()=>{if(STATE.last_updated)updateAll(STATE);},9000);
+</script>
+</body>
+</html>
